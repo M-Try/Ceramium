@@ -22,30 +22,3 @@
     if (_ret < 0) {
         err(EXIT_FAILURE, "IO-control command setting memory region");
     }
-
-    // acquire vcpu
-    vcpu = acquire_vcpu();
-    if (vcpu < 0) {
-        err(EXIT_FAILURE, "IO-control command acquiring vCPU");
-    }
-
-
-
-    struct kvm_run *run = acquire_runhandle();
-
-
-    // custom reset function
-    reset_vcpu(vcpu);
-
-    logger.log(LOG_INFO, "vCPU and registers set up, VM ready for execution");
-
-    // run
-    while (1) {
-        clock_t _begin_time = clock();
-
-        run_vcpu(vcpu);
-
-        switch (run->exit_reason) {
-            case KVM_EXIT_HLT:
-                printf("Execution took %f seconds time\n", double(clock() - _begin_time) / CLOCKS_PER_SEC);
-                logger.log(LOG_INFO, "vCPU halted, exe
