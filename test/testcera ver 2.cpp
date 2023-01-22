@@ -1,7 +1,3 @@
-#include "./src/cera.cpp"
-
-    // guest initialization
-    logger.log(LOG_INFO, "Protomachine acquired and ready to be initialized");
 
     // allocate memory and pass on to guest protomachine
     void *mem = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);

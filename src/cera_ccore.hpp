@@ -11,10 +11,10 @@ namespace Ceramium {
         struct kvm_run *Run_Handle = nullptr;
 
     public:
-        Cera_VCPU(unsigned int VM_Handle_);
+        Cera_VCPU(unsigned int VM_Handle_, unsigned int New_VCPU_Id);
         ~Cera_VCPU();
 
-        void Late_Init(unsigned int VM_Handle_);
+        void Late_Init(unsigned int VM_Handle_, unsigned int New_VCPU_Id);
         void Run_Here(void);
         void Run_Threaded(void);
     };

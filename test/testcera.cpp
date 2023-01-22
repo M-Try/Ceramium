@@ -27,7 +27,6 @@ int main(int argc, const char **argv) {
 
     _ceratest.Config_Cera_Core(CERA_SETCCRIP, 0, 0x1000);
 
-
     _ceratest.Run_Single_Core(0, CERA_R_IOLESS);
 
     _ceratest.Remove_Cera_Core(0);
@@ -76,9 +75,8 @@ int main(int argc, const char **argv) {
         switch (run->exit_reason) {
             case KVM_EXIT_HLT:
                 printf("Execution took %f seconds time\n", double(clock() - _begin_time) / CLOCKS_PER_SEC);
-                logger.log(LOG_INFO, "vCPU halted, execution successful; exiting...");
                 puts("KVM_EXIT_HLT");
-                return EXIT_SUCCESS;
+                  return EXIT_SUCCESS;
 
             case KVM_EXIT_IO:
                 if (run->io.direction == KVM_EXIT_IO_OUT &&
@@ -107,6 +105,5 @@ int main(int argc, const char **argv) {
         }
     }
 
-    logger.log(LOG_WARN, "Wh-wh-what? how did i end up near main tail? whatever, exiting.");
     return EXIT_SUCCESS;
 }

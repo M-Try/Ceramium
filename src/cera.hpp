@@ -11,14 +11,14 @@ using std::vector;
 
 namespace Ceramium {
     int Global_Kvm_Handle;
+    size_t Kvm_VCPU_Runmap_Size;
 
     void Init(void);
     void Release(void);
 
     class Cera_Vm {
     private:
-        bool Powered;
-        int Vm_Descriptor{ -1 };
+        int Vm_Descriptor = -1;
         vector<int> VCores_List;
         vector<VMem> VMem_List;
 

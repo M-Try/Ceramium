@@ -52,6 +52,8 @@ namespace Ceramium {
             throw cerainit_error();
         }
 
+        Kvm_VCPU_Runmap_Size = ioctl(kvmfh, KVM_GET_VCPU_MMAP_SIZE, NULL);
+
         Global_Kvm_Handle = kvmfh;
     }
 
