@@ -53,8 +53,8 @@ namespace Ceramium {
         }
 
         Kvm_VCPU_Runmap_Size = ioctl(kvmfh, KVM_GET_VCPU_MMAP_SIZE, NULL);
-
-        Global_Kvm_Handle = kvmfh;
+        Kvm_VCPU_Id_Max = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_MAX_VCPU_ID);
+        Global_Kvm_Handle = kvmfh; // should always be the last step
     }
 
     void Release(void) {
@@ -89,7 +89,7 @@ namespace Ceramium {
             } // otherwise, do not break and continue
         }
     }
-    
+    /*
     VMem_Id_t Cera_Vm::Insert_Mem(size_t VMem_Size) {
         if (VMem_Size < 1) { // TODO: Make suitable macro for this
             throw er; // TODO: MAKE EXC TYPE OR USE EXISTING ONE -> EVALUATE A FITTING TYPE
@@ -116,17 +116,25 @@ namespace Ceramium {
             throw er; // TODO: MAKE EXC TYPE
         }
     }
+    */
 
     VMem_Id_t Cera_Vm::Insert_Mem(HMem_Area_Specifier *Mem_Spec, unsigned long long VM_Offset) {
+        // this invariably has to call into the memory subsystem to perform clean memory mappings
+
         if (Mem_Spec->Address == nullptr) {
             throw er; // TODO: MAKE EXC TYPE
         }
-
+^
+        // acquires new memory
         void *mem = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         if (mem == MAP_FAILED) {
             throw er; // TODO: MAKE EXC TYPE
         }
 
+        // several problems with this:
+        // 1: the slot has to be chosen dynamically (TODO: CHECK KVM LIMITATION)
+        // 2: the memory at VM_Offset might overlap with an existing user memory region mapping
+        // 3: the memory might not overlap at VM_Offset but due to its size collide with an existing mapping near its end
         struct kvm_userspace_memory_region region = {
             .slot = 0,
             .guest_phys_addr = VM_Offset,
@@ -136,18 +144,20 @@ namespace Ceramium {
 
         __int32_t _ret = ioctl(vm, KVM_SET_USER_MEMORY_REGION, &region);
         if (_ret < 0) {
-            err(EXIT_FAILURE, "IO-control command setting memory region");
             throw er; // TODO: MAKE EXC TYPE
         }
     }
 
     CCore_Id_t Cera_Vm::Insert_Cera_Core(void) {
-        _newvcpu = acquire_vcpu(this->Vm_Descriptor);
-        if (_newvcpu == -1) {
-            throw er; // TODO: MAKE EXC TYPE
+        int _newid = VCores_List.size();
+
+        if (_newid > Kvm_VCPU_Id_Max) {
+            throw er;
         }
 
-        acquire_runhandle(_newvcpu);
+        VCores_List.push_back(Cera_VCPU(Vm_Descriptor, _newid));
+
+        return _newid;
     }
 
     void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
@@ -171,7 +181,19 @@ namespace Ceramium {
         }
     }
 
+    void Cera_Vm::Manip_Mem(VMem_Id_t Id, void *Host_Mem_Location, size_t Length) {
+        HMem_Area_Specifier *HMem = &(VMem_List.at(Id).Host_Memory);
 
+        if (HMem->Address == nullptr) {
+            throw er; // TODO: MAKE EXC TYPE
+        }
+
+        if (HMem->Size < Length) {
+            throw er; // TODO MAKE EXC TYPE
+        }
+
+        memcpy(HMem->Address, Host_Mem_Location, Length);
+    }
 
 
 

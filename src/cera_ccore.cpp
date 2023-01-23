@@ -7,6 +7,7 @@
 
 #include "./cera.hpp"
 #include "./cera_ccore.hpp"
+#include "./cera_types.hpp"
 
 namespace Ceramium {
     Cera_VCPU::Cera_VCPU(unsigned int VM_Handle_, unsigned int New_VCPU_Id) {
@@ -55,5 +56,9 @@ namespace Ceramium {
 
     void Cera_VCPU::Run_Threaded(void) {
         std::thread T_Core_Run = std::thread(Ceramium::Cera_VCPU::Run_Here, this);
+    }
+
+    CCore_Id_t Cera_VCPU::Get_Core_Id(void) {
+        return Id;
     }
 }

@@ -11,6 +11,7 @@ using std::vector;
 
 namespace Ceramium {
     int Global_Kvm_Handle;
+    int Kvm_VCPU_Id_Max;
     size_t Kvm_VCPU_Runmap_Size;
 
     void Init(void);
