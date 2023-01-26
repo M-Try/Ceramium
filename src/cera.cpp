@@ -181,24 +181,24 @@ namespace Ceramium {
         }
     }
 
-    void Cera_Vm::Manip_Mem(VMem_Id_t Id, void *Host_Mem_Location, size_t Length) {
-        HMem_Area_Specifier *HMem = &(VMem_List.at(Id).Host_Memory);
-
-        if (HMem->Address == nullptr) {
-            throw er; // TODO: MAKE EXC TYPE
+    void Cera_Vm::Manip_Mem(VMem_Id_t Id, HMem_Area_Specifier Host_Mem_Source) {
+        try {
+            HMem_Area_Specifier *HMem = &(VMem_List.at(Id).Host_Memory);
+        }
+        except (std::out_of_range &e) {
+            throw std::invalid_argument("No virtual memory module with given Id")
+        }
+        
+        if (Host_Mem_Source == nullptr) {
+            throw std::invalid_argument("Host_Mem_Source holds invalid address (null pointer)")
         }
 
         if (HMem->Size < Length) {
-            throw er; // TODO MAKE EXC TYPE
+            throw std::invalid_argument("Memory mismatch: Length is larger than target memory module");
         }
 
-        memcpy(HMem->Address, Host_Mem_Location, Length);
+        memcpy(HMem->Address, Host_Mem_Source.Address, Host_Mem_Source.Length);
     }
-
-
-
-
-
 
     int acquire_vcpu(int _vm) {
         return ioctl(_vm, KVM_CREATE_VCPU, (unsigned long) 0UL);
