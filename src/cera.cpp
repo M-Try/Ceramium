@@ -29,8 +29,10 @@
 #include "./include/smlog.hpp"
 
 // local includes
-#include "./cera_exceptions.hpp"
 #include "./cera.hpp"
+#include "./cera_ccore.hpp"
+#include "./cera_types.hpp"
+#include "./cera_exceptions.hpp"
 
 
 namespace Ceramium {
@@ -160,8 +162,19 @@ namespace Ceramium {
         return _newid;
     }
 
-    void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
-        run_vcpu(Id);
+    void Cera_Vm::FLARE(CC_R_Flag_t Flags) {
+        for (auto &i : VCores_List) {
+            i.Run_Threaded();
+        }
+    }
+
+    void Cera_Vm::Run_Single_Core(CCore_Id_t Id, CC_R_Flag_t Flags) {
+        try {
+            VCores_List.at(Id).Run_Here();
+        }
+        except (std::out_of_range &e) {
+            throw std::invalid_argument("Cannot run: No VCPU with given Core Id");
+        }
     }
 
     void Cera_Vm::Remove_Mem(VMem_Id_t Id) {
@@ -174,10 +187,11 @@ namespace Ceramium {
         }
 
         try {
-            VMem_List.at()
+            ~(VMem_List.at(Id));
+            VMem_List.erase(Id);
         }
         except (std::out_of_range &e) {
-
+            throw std::invalid_argument("Unable to remove virtual memory component: No VMem with given Id");
         }
     }
 

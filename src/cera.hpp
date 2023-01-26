@@ -6,6 +6,7 @@
 
 #include "./cera_vmem.hpp"
 #include "./cera_types.hpp"
+#include "./cera_ccore.hpp"
 
 using std::vector;
 
@@ -20,7 +21,7 @@ namespace Ceramium {
     class Cera_Vm {
     private:
         int Vm_Descriptor = -1;
-        vector<int> VCores_List;
+        vector<Cera_VCPU> VCores_List;
         vector<VMem> VMem_List;
 
     public:
