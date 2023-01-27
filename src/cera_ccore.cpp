@@ -5,7 +5,7 @@
 
 #include <thread>
 
-#include "./cera.hpp"
+#include "./cera_init.hpp"
 #include "./cera_ccore.hpp"
 #include "./cera_types.hpp"
 
