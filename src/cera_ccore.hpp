@@ -6,9 +6,9 @@
 namespace Ceramium {
     class Cera_VCPU {
     private:
-        CCore_Id_t FHandle = -1;
+        signed int FHandle = -1;
         signed int VM_Handle = -1;
-        signed int Id = -1;
+        CCore_Id_t Id = -1;
         struct kvm_run *Run_Handle = nullptr;
 
     public:

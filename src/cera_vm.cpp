@@ -9,7 +9,7 @@
 // no idea what im using these for to be honest
 #include <time.h>
 #include <fcntl.h> // open()
-#include <string.h>
+#include <string.h> // memcpy()
 #include <unistd.h>
 #include <stdlib.h>
 #include <syscall.h>
@@ -17,9 +17,9 @@
 
 // platform includes
 #include <err.h> // yea so this is actually a bsd extension apparently
-#include <sys/mman.h> // for mmap?
+#include <sys/mman.h> // mmap() + macros
 #include <linux/kvm.h> // obvious
-#include <sys/ioctl.h> // also obvious
+#include <sys/ioctl.h> // ioctl()
 
 // C++ standard library includes
 #include <vector>
@@ -30,46 +30,10 @@
 
 // local includes
 #include "./cera_exceptions.hpp"
-#include "./cera.hpp"
+#include "./cera_vm.hpp"
 
 
 namespace Ceramium {
-    void Init(void) {
-        int kvmfh = open("/dev/kvm", O_RDWR | O_CLOEXEC);
-        if(kvmfh == -1) {
-            throw cerainit_error();
-        }
-
-        int c_check_kvm_ver = ioctl(kvmfh, KVM_GET_API_VERSION, NULL);
-
-        if (c_check_kvm_ver != 12) {
-            throw cerainit_error();
-        }
-
-        // check if we can use a memory-mapped area as vm memory
-        int c_check_kvm_ver = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
-        if (c_check_kvm_ver == -1) {
-            throw cerainit_error();
-        }
-
-        Kvm_VCPU_Runmap_Size = ioctl(kvmfh, KVM_GET_VCPU_MMAP_SIZE, NULL);
-        Kvm_VCPU_Id_Max = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_MAX_VCPU_ID);
-        Global_Kvm_Handle = kvmfh; // should always be the last step
-    }
-
-    void Release(void) {
-        // safely close kvm descriptor
-        // TODO: check if this can result in an eternally unbroken loop
-        while (1) {
-            int _close_ret = close(Global_Kvm_Handle);
-
-            if (_close_ret == 0 || errno != EINTR) {
-                break;
-            } // otherwise, do not break and continue
-        }
-    }
-
-
     Cera_Vm::Cera_Vm(unsigned int VCPU_Count) {
         this->Vm_Descriptor = ioctl(Global_Kvm_Handle, KVM_CREATE_VM, 0);
 
@@ -198,42 +162,5 @@ namespace Ceramium {
         }
 
         memcpy(HMem->Address, Host_Mem_Source.Address, Host_Mem_Source.Length);
-    }
-
-    int acquire_vcpu(int _vm) {
-        return ioctl(_vm, KVM_CREATE_VCPU, (unsigned long) 0UL);
-    }
-
-    void run_vcpu(int _vcpu) {
-        ioctl(_vcpu, KVM_RUN, NULL);
-    }
-
-    void reset_vcpu(int _vcpu) {
-        struct kvm_sregs sregs;
-
-        ioctl(_vcpu, KVM_GET_SREGS, &sregs); // fetch softregs
-
-        sregs.cs.base = 0;
-        sregs.cs.selector = 0;
-        
-        ioctl(_vcpu, KVM_SET_SREGS, &sregs); // writeback
-
-        struct kvm_regs regs = { // deliberate ad-hoc manipulation for runtime setup
-            .rax = 2,
-            .rbx = 2,
-            .rip = 0x1000,
-            .rflags = 0x2,
-        };
-
-        ioctl(_vcpu, KVM_SET_REGS, &regs); // write regs
-    }
-
-    struct kvm_run *acquire_runhandle(int _kvmsys, int _vcpu) {
-        int mmap_size = ioctl(_kvmsys, KVM_GET_VCPU_MMAP_SIZE, NULL);
-        struct kvm_run *run = (kvm_run *) mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, _vcpu, 0);
-
-        if (run == MAP_FAILED) {
-            err(EXIT_FAILURE, "KVM: mmap kvm_run");
-        }
     }
 }
