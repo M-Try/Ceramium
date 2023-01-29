@@ -1,18 +1,19 @@
 CXX := g++
 BIN := libceramium.1.o
-CXXFLAGS := 
+CXXFLAGS :=
 OUTFLAGS := -o $(BIN)
+LIBFLAGS := -I.
 
 all: main
 
 main:
-	$(CXX) $(CXXFLAGS) $(OUTFLAGS) src/*.cpp
+	$(CXX) $(CXXFLAGS) $(OUTFLAGS) src/*.cpp $(LIBFLAGS)
 
 debug:
-	$(CXX) $(CXXFLAGS) -g $(OUTFLAGS) src/*.cpp
+	$(CXX) $(CXXFLAGS) -g $(OUTFLAGS) src/*.cpp $(LIBFLAGS)
 
 test:
-	$(CXX) $(BIN) test/testcera.h -o test/testcera.ELF
+	$(CXX) $(BIN) test/testcera.cpp -o test/testcera.ELF
 
 clean:
 	rm $(BIN)

@@ -1,4 +1,12 @@
+#include <errno.h>
+#include <fcntl.h>
+
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/kvm.h>
+
 #include "./cera_init.hpp"
+#include "./exceptions/cera_exceptions.hpp"
 
 namespace Ceramium {
     void Init(void) {
@@ -14,8 +22,8 @@ namespace Ceramium {
         }
 
         // check if we can use a memory-mapped area as vm memory
-        int c_check_kvm_ver = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
-        if (c_check_kvm_ver == -1) {
+        int c_check_kvm_ummap = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
+        if (c_check_kvm_ummap == -1) {
             throw cerainit_error();
         }
 

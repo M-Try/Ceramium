@@ -1,13 +1,17 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h> // close()
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
 #include <thread>
+#include <stdexcept>
 
+#include "./common.hpp"
 #include "./cera_init.hpp"
 #include "./cera_ccore.hpp"
 #include "./cera_types.hpp"
+#include "./exceptions/cera_exceptions.hpp"
 
 namespace Ceramium {
     Cera_VCPU::Cera_VCPU(unsigned int VM_Handle_, unsigned int New_VCPU_Id) {
@@ -25,12 +29,12 @@ namespace Ceramium {
     }
 
     void Cera_VCPU::Late_Init(unsigned int VM_Handle_, unsigned int New_VCPU_Id) {
-        // consider that in the event of an error, some cleanup might still be necessary (ie. runhandle acquiring failed; vcpu handle persists but goes stale)
+        // consider that in the event of an error, some cleanup might still be necessary (ie. runhandle acquiring failed but vcpu handle persists and goes stale)
         int vcpufh = ioctl(VM_Handle_, KVM_CREATE_VCPU, New_VCPU_Id);
         if (vcpufh == -1) {
-            if (errno == 000 /* FIX THIS; FIND OUT WHICH ERRNOS THIS IOCTL CAN THROW */) {
-                throw er; // TODO MAKE EXC TYPE OR THROW EXISTING FITTING ONE
-            }
+            //if (errno == COMPILETIME_WARN) {
+                throw std::invalid_argument("cannot make VCPU: VM_Handle_ invalid (EINVAL) or VCPUID exists (EEXIST)");
+            //}
         }
 
         Id = New_VCPU_Id;
@@ -49,8 +53,8 @@ namespace Ceramium {
     void Cera_VCPU::Run_Here(void) {
         run_vcpu(this->FHandle);
 
-        if (run->exit_reason == KVM_EXIT_FAIL_ENTRY || run->exit_reason == KVM_EXIT_INTERNAL_ERROR) {
-            throw er; // TODO MAKE EXC TYPE
+        if (Run_Handle->exit_reason == KVM_EXIT_FAIL_ENTRY || Run_Handle->exit_reason == KVM_EXIT_INTERNAL_ERROR) {
+            throw cera_vcpu_entry(); // TODO MAKE EXC TYPE
         }
     }
 
