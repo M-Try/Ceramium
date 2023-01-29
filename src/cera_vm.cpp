@@ -26,11 +26,12 @@
 #include <stdexcept>
 
 // mlib library includes
-#include "./include/smlog.hpp"
+#include "../include/smlog.hpp"
 
 // local includes
-#include "./cera_exceptions.hpp"
 #include "./cera_vm.hpp"
+#include "./exceptions/cera_exceptions.hpp"
+#include "./cera_init.hpp"
 
 
 namespace Ceramium {
@@ -86,13 +87,24 @@ namespace Ceramium {
         // this invariably has to call into the memory subsystem to perform clean memory mappings
 
         if (Mem_Spec->Address == nullptr) {
-            throw er; // TODO: MAKE EXC TYPE
+            throw std::invalid_argument("Hostmem area specifier points to NULL");
         }
-^
+
         // acquires new memory
         void *mem = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         if (mem == MAP_FAILED) {
-            throw er; // TODO: MAKE EXC TYPE
+            if (errno == ENOMEM) {
+                // ENOMEM can be fired by the process's RLIMIT_DATA limit, described in getrlimit(2).
+                // exceeding that limit causes the error. TODO: try to increase the limit (configurable behaviour?)
+                // instead of throwing an error
+                throw std::runtime_error("Cannot perform memory allocation: out of memory");
+            }
+            else if (errno == EAGAIN) {
+                throw std::runtime_error("Cannot perform memory allocation: too much memory has been locked");
+            }
+            else if (errno == EINVAL) {
+                throw std::runtime_error("Cannot perform memory allocation: invalid arguments");
+            }
         }
 
         // several problems with this:
@@ -106,7 +118,7 @@ namespace Ceramium {
             .userspace_addr = (u_int64_t) Mem_Spec->Address,
         };
 
-        __int32_t _ret = ioctl(vm, KVM_SET_USER_MEMORY_REGION, &region);
+        __int32_t _ret = ioctl(Vm_Descriptor, KVM_SET_USER_MEMORY_REGION, &region);
         if (_ret < 0) {
             throw er; // TODO: MAKE EXC TYPE
         }
@@ -138,29 +150,31 @@ namespace Ceramium {
         }
 
         try {
-            VMem_List.at()
+            VMem_List.at(Id);
         }
-        except (std::out_of_range &e) {
-
+        catch (std::out_of_range &e) {
+            throw std::invalid_argument("No such VMem module");
         }
     }
 
     void Cera_Vm::Manip_Mem(VMem_Id_t Id, HMem_Area_Specifier Host_Mem_Source) {
+        HMem_Area_Specifier *HMem;
+
         try {
-            HMem_Area_Specifier *HMem = &(VMem_List.at(Id).Host_Memory);
+            HMem = &(VMem_List.at(Id).Host_Memory);
         }
-        except (std::out_of_range &e) {
-            throw std::invalid_argument("No virtual memory module with given Id")
+        catch (std::out_of_range &e) {
+            throw std::invalid_argument("No virtual memory module with given Id");
         }
         
-        if (Host_Mem_Source == nullptr) {
-            throw std::invalid_argument("Host_Mem_Source holds invalid address (null pointer)")
+        if (Host_Mem_Source.Address == nullptr) {
+            throw std::invalid_argument("Host_Mem_Source holds invalid address (null pointer)");
         }
 
-        if (HMem->Size < Length) {
+        if (HMem->Size < Host_Mem_Source.Size) {
             throw std::invalid_argument("Memory mismatch: Length is larger than target memory module");
         }
 
-        memcpy(HMem->Address, Host_Mem_Source.Address, Host_Mem_Source.Length);
+        memcpy(HMem->Address, Host_Mem_Source.Address, Host_Mem_Source.Size);
     }
 }
