@@ -1,4 +1,4 @@
-#include "./src/cera.cpp"
+#include "/src/cera_init.hpp"
 
 const unsigned char vm_guest_code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx ; big endian number*/ 
