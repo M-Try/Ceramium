@@ -136,8 +136,20 @@ namespace Ceramium {
         return _newid;
     }
 
+    void Cera_Vm::FLARE(CC_R_Flag_t Flags) {
+        for (auto &i : VCores_List) {
+            i.Run_Threaded();
+        }
+    }
+
     void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
-        run_vcpu(Id);
+        try {
+            VCores_List.at(Id).Run_Here();
+        }
+        catch (std::out_of_range &e) {
+            throw std::invalid_argument("Cannot run: No VCPU with given Core Id");
+        }
+
     }
 
     void Cera_Vm::Remove_Mem(VMem_Id_t Id) {
@@ -150,7 +162,7 @@ namespace Ceramium {
         }
 
         try {
-            VMem_List.at(Id);
+            VMem_List.erase(Id);
         }
         catch (std::out_of_range &e) {
             throw std::invalid_argument("No such VMem module");
