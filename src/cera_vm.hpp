@@ -28,8 +28,8 @@ namespace Ceramium {
         bool Config_Cera_Core(CCC_t Config_Code, CCore_Id_t Id, int64_t Arg);
         void Manip_Mem(VMem_Id_t Id, HMem_Area_Specifier Host_Mem_Source);
 
-        void FLARE(CC_R_Flag_t Flags); // full load and run environment
-        void Run_Single_Core(CCore_Id_t Id, CC_R_Flag_t Flags);
+        void FLARE(CC_R_Flags_t Flags); // full load and run environment
+        void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags);
 
         void Remove_Mem(VMem_Id_t Id);
         void Remove_Cera_Core(CCore_Id_t Id);

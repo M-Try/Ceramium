@@ -120,7 +120,7 @@ namespace Ceramium {
 
         __int32_t _ret = ioctl(Vm_Descriptor, KVM_SET_USER_MEMORY_REGION, &region);
         if (_ret < 0) {
-            throw er; // TODO: MAKE EXC TYPE
+            throw ; // TODO: MAKE EXC TYPE
         }
     }
 
@@ -136,13 +136,13 @@ namespace Ceramium {
         return _newid;
     }
 
-    void Cera_Vm::FLARE(CC_R_Flag_t Flags) {
+    void Cera_Vm::FLARE(CC_R_Flags_t Flags) {
         for (auto &i : VCores_List) {
             i.Run_Threaded();
         }
     }
 
-    void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
+    void Cera_Vm::Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
         try {
             VCores_List.at(Id).Run_Here();
         }

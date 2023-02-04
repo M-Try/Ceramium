@@ -54,12 +54,12 @@ namespace Ceramium {
         run_vcpu(this->FHandle);
 
         if (Run_Handle->exit_reason == KVM_EXIT_FAIL_ENTRY || Run_Handle->exit_reason == KVM_EXIT_INTERNAL_ERROR) {
-            throw cera_vcpu_entry(); // TODO MAKE EXC TYPE
+            throw cera_vcpu_entry_error(); // TODO MAKE EXC TYPE
         }
     }
 
     void Cera_VCPU::Run_Threaded(void) {
-        std::thread T_Core_Run = std::thread(Ceramium::Cera_VCPU::Run_Here, this);
+        std::thread T_Core_Run = std::thread(&Ceramium::Cera_VCPU::Run_Here, this);
     }
 
     CCore_Id_t Cera_VCPU::Get_Core_Id(void) {
