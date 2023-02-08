@@ -13,5 +13,6 @@ struct HMem_Area_Specifier {
 struct VMem {
     VMem_Id_t Id;
     HMem_Area_Specifier Host_Memory;
+    unsigned int VSlot;
     off_t VOffset;
 };

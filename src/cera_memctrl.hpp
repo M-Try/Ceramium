@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
 
+#include <vector>
 #include <stdexcept>
 
 #include "./cera_vmem.hpp"
@@ -14,9 +15,7 @@ namespace Ceramium {
     class Cera_MemCtl {
     private:
         VM_FD_t VM_FHandle;
-        VMem *VMem_List;
-        bool *VMem_List_Used_Mask;
-        size_t N_VMems;
+        std::vector<VMem> VMem_List;
     public:
         Cera_MemCtl(size_t N_VMems, VM_FD_t VM_FHandle);
         ~Cera_MemCtl();
@@ -66,6 +65,28 @@ namespace Ceramium {
                 return i;
             }
         }
+    }
+
+    void Cera_MemCtl::Remove_VMem_At_Slot(unsigned int V_Slot) {
+        struct kvm_userspace_memory_region reg = {
+            .slot = V_Slot,
+            .memory_size = 0
+        };
+
+        ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &reg);
+    }
+
+    void Cera_MemCtl::Remove_Mem(VMem_Id_t Id) {
+        size_t _size = VMem_List.size();
+        for (auto &i : VMem_List) {
+            if (i.Id == Id) {
+
+                munmap(i.Host_Memory.Address, i.Host_Memory.Size);
+                VMem_List.erase(VMem_List.begin()+i);
+                return;
+            }
+        }
+        throw std::out_of_range("No VMem with given VMem_Id");
     }
 
     Cera_MemCtl::~Cera_MemCtl() {
