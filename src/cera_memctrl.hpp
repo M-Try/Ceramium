@@ -15,13 +15,16 @@ namespace Ceramium {
     class Cera_MemCtl {
     private:
         VM_FD_t VM_FHandle;
+        VMem_Id_t Next_VMem_Id;
         std::vector<VMem> VMem_List;
     public:
         Cera_MemCtl(size_t N_VMems, VM_FD_t VM_FHandle);
         ~Cera_MemCtl();
 
-        void _Resize_HWList(size_t N_VMems);
+        VMem_Id_t Add_Mem(unsigned int V_Slot, size_t Size, off_t VOffset);
         VMem_Id_t Insert_HMem(unsigned int V_Slot, HMem_Area_Specifier Host_Memory, off_t VOffset);
+        void Remove_VMem_At_Slot(unsigned int V_Slot);
+        void Free_HMem(VMem_Id_t Id);
     };
 
     Cera_MemCtl::Cera_MemCtl(size_t N_VMems, VM_FD_t VM_FHandle) {
@@ -29,19 +32,41 @@ namespace Ceramium {
             throw std::invalid_argument("Cannot create Memctl: N_VMems must be at least 1");
         }
 
-        VMem_List = (VMem *) calloc(N_VMems, sizeof(VMem));
-        VMem_List_Used_Mask = (bool *) calloc(N_VMems, sizeof(bool));
+        this->Next_VMem_Id = 0;
+        this->VM_FHandle = VM_FHandle;
     }
 
-    void Cera_MemCtl::_Resize_HWList(size_t N_VMems) {
-        if (N_VMems == 0) {
-            throw std::invalid_argument("Cannot resize HWList: N_VMems must be at least 1");
+    Cera_MemCtl::~Cera_MemCtl() {
+        free(VMem_List);
+    }
+
+    VMem_Id_t Cera_MemCtl::Add_Mem(unsigned int V_Slot, size_t N_Pages, off_t VOffset) {
+        if (N_Pages == 0) {
+            throw std::invalid_argument("Cannot create memory module: N_Pages = 0 is not allowed");
         }
 
-        VMem_List = (VMem *) realloc(VMem_List, N_VMems * sizeof(VMem));
-        VMem_List_Used_Mask = (bool *) realloc(VMem_List_Used_Mask, N_VMems * sizeof(bool));
-    }
+        void *mem = mmap(NULL, N_Pages * 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        if (mem == MAP_FAILED) {
+            throw er; // TODO MAKE EXC TYPE
+        }
 
+        struct kvm_userspace_memory_region region = {
+            .slot = V_Slot,
+            .guest_phys_addr = VOffset,
+            .memory_size = N_Pages * 0x1000,
+            .userspace_addr = (u_int64_t) mem
+        };
+        ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region); // IMPLEMENTME: Error handling
+
+        VMem_List.push_back({
+            .Id = Next_VMem_Id,
+            .Host_Memory = Host_Memory,
+            .VSlot = V_Slot,
+            .VOffset = VOffset
+        });
+
+        return Next_VMem_Id++;
+    }
 
     VMem_Id_t Cera_MemCtl::Insert_HMem(unsigned int V_Slot, HMem_Area_Specifier Host_Memory, off_t VOffset) {
         for (size_t i = 0; i < N_VMems; i++) {
@@ -76,20 +101,18 @@ namespace Ceramium {
         ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &reg);
     }
 
-    void Cera_MemCtl::Remove_Mem(VMem_Id_t Id) {
+    void Cera_MemCtl::Free_HMem(VMem_Id_t Id) {
         size_t _size = VMem_List.size();
         for (auto &i : VMem_List) {
             if (i.Id == Id) {
+                Remove_VMem_At_Slot(i.VSlot);
 
                 munmap(i.Host_Memory.Address, i.Host_Memory.Size);
                 VMem_List.erase(VMem_List.begin()+i);
                 return;
             }
         }
-        throw std::out_of_range("No VMem with given VMem_Id");
-    }
 
-    Cera_MemCtl::~Cera_MemCtl() {
-        free(VMem_List);
+        throw std::out_of_range("No VMem with given VMem_Id");
     }
 }

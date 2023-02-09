@@ -36,18 +36,6 @@ int main(int argc, const char **argv) {
 }
 
 /*
-struct kvm_userspace_memory_region region = {
-    .slot = 0,
-    .guest_phys_addr = 0x1000,
-    .memory_size = 0x1000,
-    .userspace_addr = (u_int64_t) mem,
-};
-
-__int32_t _ret = ioctl(vm, KVM_SET_USER_MEMORY_REGION, &region);
-if (_ret < 0) {
-    err(EXIT_FAILURE, "IO-control command setting memory region");
-}
-
 reset_vcpu(vcpu);
 
 while (1) {
