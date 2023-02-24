@@ -10,7 +10,15 @@
 
 namespace Ceramium {
     void Init(void) {
-        int kvmfh = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+        Init("/dev/kvm");
+    }
+
+    void Init(char *Kvm_Path) {
+        if (Kvm_Path == nullptr) {
+            throw er;
+        }
+
+        int kvmfh = open(Kvm_Path, O_RDWR | O_CLOEXEC);
         if(kvmfh == -1) {
             throw cerainit_error();
         }

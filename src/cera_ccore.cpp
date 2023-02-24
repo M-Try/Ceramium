@@ -32,7 +32,7 @@ namespace Ceramium {
         // consider that in the event of an error, some cleanup might still be necessary (ie. runhandle acquiring failed but vcpu handle persists and goes stale)
         int vcpufh = ioctl(VM_Handle_, KVM_CREATE_VCPU, New_VCPU_Id);
         if (vcpufh == -1) {
-            //if (errno == COMPILETIME_WARN) {
+            //if (errno == /*TODO: FIND OUT WHICH ERRNOS THIS THROWS*/) {
                 throw std::invalid_argument("cannot make VCPU: VM_Handle_ invalid (EINVAL) or VCPUID exists (EEXIST)");
             //}
         }

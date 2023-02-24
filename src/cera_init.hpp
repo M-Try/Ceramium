@@ -8,5 +8,6 @@ namespace Ceramium {
     size_t Kvm_VCPU_Runmap_Size;
 
     void Init(void);
+    void Init(char *Kvm_Path);
     void Release(void);
 }
