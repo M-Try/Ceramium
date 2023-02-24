@@ -5,21 +5,25 @@
 #include <vector>
 
 #include "./cera_vmem.hpp"
+#include "./cera_types.hpp"
 
 namespace Ceramium {
     class Cera_MemCtl {
     private:
         VM_FD_t VM_FHandle;
-        VMem_Id_t Next_VMem_Id;
         std::vector<VMem> VMem_List;
+        
+        void _Add_Mem_To_List(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset, Mem_Flags_t Flags);
     public:
-        Cera_MemCtl(size_t N_VMems, VM_FD_t VM_FHandle);
+        Cera_MemCtl(VM_FD_t VM_FHandle);
         ~Cera_MemCtl();
 
-        VMem_Id_t Add_Mem(unsigned int V_Slot, size_t Size, off_t VOffset);
-        VMem_Id_t Insert_HMem(unsigned int V_Slot, HMem_Area_Specifier Host_Memory, off_t VOffset);
-        void Remove_Mem(VMem_Id_t Id);
-        void Remove_VMem_At_Slot(unsigned int V_Slot);
-        void Free_HMem(VMem_Id_t Id);
+        void Create_Mem(Mem_Slot_t V_Slot, size_t Size, off_t VOffset);
+        void Delete_Mem(Mem_Slot_t V_Slot);
+        void Insert_HMem(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset);
+        void Detach_HMem(Mem_Slot_t V_Slot);
+
+        void Copy_To_Mem(Mem_Slot_t V_Slot, void *H_Address, size_t Length, off_t Offset);
+        bool Is_Slot_Taken(Mem_Slot_t V_Slot);
     };
 }

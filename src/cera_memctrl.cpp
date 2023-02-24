@@ -1,4 +1,5 @@
 #include <stdlib.h> // malloc()
+#include <string.h>
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -14,22 +15,28 @@
 #include "./cera_memctrl.hpp"
 
 namespace Ceramium {
-    Cera_MemCtl::Cera_MemCtl(size_t N_VMems, VM_FD_t VM_FHandle) {
-        if (N_VMems == 0) {
-            throw std::invalid_argument("Cannot create Memctl: N_VMems must be at least 1");
-        }
-
-        this->Next_VMem_Id = 0;
+    Cera_MemCtl::Cera_MemCtl(VM_FD_t VM_FHandle) {
         this->VM_FHandle = VM_FHandle;
     }
 
     Cera_MemCtl::~Cera_MemCtl() {
-        free(VMem_List);
+        VMem &ci;
+        for (size_t i = 0; i < VMem_List.size(); i++) {
+            ci = VMem_List.at(i);
+            if (ci.Flags & 0x01) {
+                munmap(ci.Host_Memory.Address, ci.Host_Memory.Size);
+            }
+        }
     }
 
-    VMem_Id_t Cera_MemCtl::Add_Mem(unsigned int V_Slot, size_t N_Pages, off_t VOffset) {
+
+    void Cera_MemCtl::Create_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset) {
         if (N_Pages == 0) {
             throw std::invalid_argument("Cannot create memory module: N_Pages = 0 is not allowed");
+        }
+
+        if (Is_Slot_Taken(V_Slot)) {
+            throw er; // TODO MAKE EXC TYPE
         }
 
         void *mem = mmap(NULL, N_Pages * 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -42,30 +49,35 @@ namespace Ceramium {
             .Size = N_Pages * 0x1000
         }
 
-        return Insert_HMem(V_Slot, hmem, VOffset);
+        _Add_Mem_To_List(V_Slot, &hmem, VOffset, 0x01);
     }
 
-    VMem_Id_t Cera_MemCtl::Insert_HMem(unsigned int V_Slot, HMem_Area_Specifier Host_Memory, off_t VOffset) {
-        struct kvm_userspace_memory_region region = {
-            .slot = V_Slot,
-            .guest_phys_addr = VOffset,
-            .memory_size = Host_Memory.Size,
-            .userspace_addr = (u_int64_t) Host_Memory.Address
-        };
+    void Cera_MemCtl::Delete_Mem(Mem_Slot_t V_Slot) {
+        VMem &ref;
+        int lim = VMem_List.size();
+        for (int i = 0; i < lim; i++) {
+            ref = VMem_List.at(i);
+            if (ref.VSlot == VSlot) {
+                Detach_HMem(ref.VSlot);
 
-        ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region);
+                munmap(ref.Host_Memory.Address, ref.Host_Memory.Size);
+                VMem_List.erase(VMem_List.begin()+i);
+                return;
+            }
+        }
 
-        VMem_List.push_back({
-            .Id = Next_VMem_Id,
-            .Host_Memory = Host_Memory,
-            .VSlot = V_Slot,
-            .VOffset = VOffset
-        });
-
-        return Next_VMem_Id++;
+        throw std::out_of_range("No module in given slot");
     }
 
-    void Cera_MemCtl::Remove_VMem_At_Slot(unsigned int V_Slot) {
+    void Cera_MemCtl::Insert_HMem(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset) {
+        if (Is_Slot_Taken(V_Slot)) {
+            throw er; // TODO MAKE EXC TYPE
+        }
+
+        _Add_Mem_To_List(V_Slot, Host_Memory, VOffset, 0x00);
+    }
+
+    void Cera_MemCtl::Detach_HMem(Mem_Slot_t V_Slot) {
         struct kvm_userspace_memory_region reg = {
             .slot = V_Slot,
             .memory_size = 0
@@ -74,28 +86,43 @@ namespace Ceramium {
         ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &reg);
     }
 
-    void Cera_MemCtl::Remove_Mem(VMem_Id_t Id) {
+    void Cera_MemCtl::Copy_To_Mem(Mem_Slot_t V_Slot, void *H_Address, size_t Length, off_t Offset) {
         for (auto &i : VMem_List) {
-            if (i.Id == Id) {
-                Remove_VMem_At_Slot(i.VSlot);
-
-                VMem_List.erase(VMem_List.begin()+i);
-                return;
+            if (i.VSlot == V_Slot) {
+                memcpy((void *) (i.Host_Memory.Address + Offset), H_Address, __min(Length, i.Host_Memory.Size - Offset));
             }
         }
     }
 
-    void Cera_MemCtl::Free_HMem(VMem_Id_t Id) {
-        for (auto &i : VMem_List) {
-            if (i.Id == Id) {
-                Remove_VMem_At_Slot(i.VSlot);
+    bool Cera_MemCtl::Is_Slot_Taken(Mem_Slot_t V_Slot) {
+        if (VMem_List.size() == 0) {
+            return false;
+        }
 
-                munmap(i.Host_Memory.Address, i.Host_Memory.Size);
-                VMem_List.erase(VMem_List.begin()+i);
-                return;
+        for (auto &i : VMem_List) {
+            if (i.VSlot == V_Slot) {
+                return true;
             }
         }
 
-        throw std::out_of_range("No VMem with given VMem_Id");
+        return false;
+    }
+
+    void Cera_MemCtl::_Add_Mem_To_List(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset, Mem_Flags_t Flags) {
+        struct kvm_userspace_memory_region region = {
+            .slot = V_Slot,
+            .guest_phys_addr = VOffset,
+            .memory_size = hmem->Size,
+            .userspace_addr = (u_int64_t) hmem->Address
+        };
+
+        ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region);
+
+        VMem_List.push_back({
+            .Host_Memory = *hmem,
+            .VSlot = V_Slot,
+            .VOffset = VOffset,
+            .Flags = Flags
+        });
     }
 }

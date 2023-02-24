@@ -19,7 +19,7 @@ int main(int argc, const char **argv) {
 
     Ceramium::Cera_Vm _ceratest;
 
-    _ceratest.Insert_Mem();
+    _ceratest.Insert_Mem(0, 1);
     _ceratest.Insert_Cera_Core();
     _ceratest.Config_Cera_Core(CERA_SETCCMEM, 0, 0);
 
