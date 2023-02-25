@@ -3,8 +3,8 @@
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <linux/kvm.h>
-
 
 #include <vector>
 #include <stdexcept>
@@ -13,6 +13,7 @@
 #include "./cera_init.hpp"
 #include "./cera_types.hpp"
 #include "./cera_memctrl.hpp"
+#include "./exceptions/common_exceptions.hpp"
 
 namespace Ceramium {
     Cera_MemCtl::Cera_MemCtl(VM_FD_t VM_FHandle) {
@@ -20,11 +21,11 @@ namespace Ceramium {
     }
 
     Cera_MemCtl::~Cera_MemCtl() {
-        VMem &ci;
+        VMem *ci;
         for (size_t i = 0; i < VMem_List.size(); i++) {
-            ci = VMem_List.at(i);
-            if (ci.Flags & 0x01) {
-                munmap(ci.Host_Memory.Address, ci.Host_Memory.Size);
+            ci = &VMem_List.at(i);
+            if (ci->Flags & 0x01) {
+                munmap(ci->Host_Memory.Address, ci->Host_Memory.Size);
             }
         }
     }
@@ -32,35 +33,27 @@ namespace Ceramium {
 
     void Cera_MemCtl::Create_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset) {
         if (N_Pages == 0) {
-            throw std::invalid_argument("Cannot create memory module: N_Pages = 0 is not allowed");
+            throw std::invalid_argument("N_Pages = 0 is not allowed");
         }
 
         if (Is_Slot_Taken(V_Slot)) {
-            throw er; // TODO MAKE EXC TYPE
+            throw slot_taken_error();
         }
 
-        void *mem = mmap(NULL, N_Pages * 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-        if (mem == MAP_FAILED) {
-            throw er; // TODO MAKE EXC TYPE
-        }
-
-        HMem_Area_Specifier hmem = {
-            .Address = mem,
-            .Size = N_Pages * 0x1000
-        }
+        HMem_Area_Specifier hmem = Make_Unbound_VMem(N_Pages);
 
         _Add_Mem_To_List(V_Slot, &hmem, VOffset, 0x01);
     }
 
     void Cera_MemCtl::Delete_Mem(Mem_Slot_t V_Slot) {
-        VMem &ref;
+        VMem *ref;
         int lim = VMem_List.size();
         for (int i = 0; i < lim; i++) {
-            ref = VMem_List.at(i);
-            if (ref.VSlot == VSlot) {
-                Detach_HMem(ref.VSlot);
+            ref = &VMem_List.at(i);
+            if (ref->VSlot == V_Slot) {
+                Detach_HMem(ref->VSlot);
 
-                munmap(ref.Host_Memory.Address, ref.Host_Memory.Size);
+                Delete_VMem(ref->Host_Memory);
                 VMem_List.erase(VMem_List.begin()+i);
                 return;
             }
@@ -112,14 +105,14 @@ namespace Ceramium {
         struct kvm_userspace_memory_region region = {
             .slot = V_Slot,
             .guest_phys_addr = VOffset,
-            .memory_size = hmem->Size,
-            .userspace_addr = (u_int64_t) hmem->Address
+            .memory_size = Host_Memory->Size,
+            .userspace_addr = (u_int64_t) Host_Memory->Address
         };
 
         ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region);
 
-        VMem_List.push_back({
-            .Host_Memory = *hmem,
+        VMem_List.push_back((VMem) {
+            .Host_Memory = *Host_Memory,
             .VSlot = V_Slot,
             .VOffset = VOffset,
             .Flags = Flags
