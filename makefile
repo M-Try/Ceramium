@@ -1,20 +1,29 @@
 CXX := g++
-BIN := libceramium.1.o
-CXXFLAGS :=
-OUTFLAGS := -o $(BIN)
-LIBFLAGS := -I.
+BIN_DIR := ./bin
+LIB_STATIC := ceramium.a
+LIB_DYNAMIC := libceramium.so.1
 
-all: main
 
-main:
-	$(CXX) $(CXXFLAGS) $(OUTFLAGS) src/*.cpp $(LIBFLAGS)
+compile_objs:
+	@echo "Compiling object files..."
+	@$(CXX) -c -fPIC ./src/*.cpp
+	@mv *.o $(BIN_DIR)/objs
+	@echo "Compiled successfully"
 
-debug:
-	$(CXX) $(CXXFLAGS) -g $(OUTFLAGS) src/*.cpp $(LIBFLAGS)
+compile_lib_static: compile_objs
+	@echo "Creating static library:"
+	@echo "Packaging..."
+	@ar -cvq $(BIN_DIR)/$(LIB_STATIC) $(BIN_DIR)/objs/*.o
+	@echo "Done."
 
-test:
-	$(CXX) $(BIN) test/testcera.cpp -o test/testcera.ELF
+compile_lib_dynamic: compile_objs
+	@echo "Creating dynamic library:"
+	@echo "Making shared object..."
+	@$(CXX) -shared $(BIN_DIR)/objs/*.o -o $(BIN_DIR)/$(LIB_DYNAMIC)
+	@echo "Done."
 
 clean:
-	rm $(BIN)
-	rm test/testcera.ELF
+	@echo "Cleaning..."
+	@rm $(BIN_DIR)/objs/*.o
+	@rm $(BIN_DIR)/*.*
+	@echo "Done."
