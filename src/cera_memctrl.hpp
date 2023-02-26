@@ -18,7 +18,7 @@ namespace Ceramium {
         Cera_MemCtl(VM_FD_t VM_FHandle);
         ~Cera_MemCtl();
 
-        void Create_Mem(Mem_Slot_t V_Slot, size_t Size, off_t VOffset);
+        void Create_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset);
         void Delete_Mem(Mem_Slot_t V_Slot);
         void Insert_HMem(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset);
         void Detach_HMem(Mem_Slot_t V_Slot);

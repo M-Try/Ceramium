@@ -5,17 +5,20 @@
 #include <sys/ioctl.h>
 #include <linux/kvm.h>
 
+#include <stdexcept>
+
 #include "./cera_init.hpp"
 #include "./exceptions/cera_exceptions.hpp"
 
+
 namespace Ceramium {
     void Init(void) {
-        Init("/dev/kvm");
+        Init((char *) "/dev/kvm");
     }
 
     void Init(char *Kvm_Path) {
         if (Kvm_Path == nullptr) {
-            throw er;
+            throw std::invalid_argument("Kvm_Path does not contain a path (null pointer)");
         }
 
         int kvmfh = open(Kvm_Path, O_RDWR | O_CLOEXEC);

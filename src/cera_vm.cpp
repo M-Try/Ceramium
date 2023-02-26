@@ -1,19 +1,11 @@
-/* Ceramium main file
-    author: M-Try
-    cera reconstruction note: wip
-
-    last edited: 5.9.2022
-*/
-
 // C standard library includes
 // no idea what im using these for to be honest
 #include <time.h>
 #include <fcntl.h> // open()
-#include <string.h> // memcpy()
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <syscall.h>
-#include <errno.h> // for error no
 
 // platform includes
 #include <err.h> // yea so this is actually a bsd extension apparently
@@ -22,27 +14,25 @@
 #include <sys/ioctl.h> // ioctl()
 
 // C++ standard library includes
-#include <vector>
 #include <stdexcept>
-
-// mlib library includes
-#include "../include/smlog.hpp"
 
 // local includes
 #include "./cera_vm.hpp"
-#include "./exceptions/cera_exceptions.hpp"
 #include "./cera_init.hpp"
+#include "./exceptions/cera_exceptions.hpp"
 
 
 namespace Ceramium {
     Cera_Vm::Cera_Vm(unsigned int VCPU_Count) {
         this->Vm_Descriptor = ioctl(Global_Kvm_Handle, KVM_CREATE_VM, 0);
-
         if (this->Vm_Descriptor == -1) {
             throw ceravm_construct_error();
         }
+        Mem_Ctrl = new Cera_MemCtl(Vm_Descriptor);
+        VCores_List_Len = Kvm_VCPU_Id_Max;
+        VCores_List = (Cera_VCPU **) calloc(VCores_List_Len, sizeof(Cera_VCPU *));
     }
-    
+
     Cera_Vm::~Cera_Vm() {
         // safely dispatch virtual machine descriptor
         // TODO: check if this can result in an eternally unbroken loop
@@ -54,139 +44,56 @@ namespace Ceramium {
             } // otherwise, do not break and continue
         }
     }
-    /*
-    VMem_Id_t Cera_Vm::Insert_Mem(size_t VMem_Size) {
-        if (VMem_Size < 1) { // TODO: Make suitable macro for this
-            throw er; // TODO: MAKE EXC TYPE OR USE EXISTING ONE -> EVALUATE A FITTING TYPE
-        }
 
-        void *mem = mmap(NULL, VMem_Size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // maybe add support for huge pages (> "HUGETLB")?
-        if (mem == MAP_FAILED) {
-            throw er; // TODO: MAKE EXC TYPE
-        }
-
-
-        unsigned int memindex = VMem_List.size();
-
-        struct kvm_userspace_memory_region region = {
-            .slot = 0,
-            .guest_phys_addr = 0x1000,
-            .memory_size = 0x1000,
-            .userspace_addr = (u_int64_t) mem,
-        };
-
-        int _ret = ioctl(vm, KVM_SET_USER_MEMORY_REGION, &region);
-        if (_ret < 0) {
-            err(EXIT_FAILURE, "IO-control command setting memory region");
-            throw er; // TODO: MAKE EXC TYPE
-        }
-    }
-    */
-
-    VMem_Id_t Cera_Vm::Insert_Mem(HMem_Area_Specifier *Mem_Spec, unsigned long long VM_Offset) {
-        // this invariably has to call into the memory subsystem to perform clean memory mappings
-
-        if (Mem_Spec->Address == nullptr) {
-            throw std::invalid_argument("Hostmem area specifier points to NULL");
-        }
-
-        // acquires new memory
-        void *mem = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-        if (mem == MAP_FAILED) {
-            if (errno == ENOMEM) {
-                // ENOMEM can be fired by the process's RLIMIT_DATA limit, described in getrlimit(2).
-                // exceeding that limit causes the error. TODO: try to increase the limit (configurable behaviour?)
-                // instead of throwing an error
-                throw std::runtime_error("Cannot perform memory allocation: out of memory");
-            }
-            else if (errno == EAGAIN) {
-                throw std::runtime_error("Cannot perform memory allocation: too much memory has been locked");
-            }
-            else if (errno == EINVAL) {
-                throw std::runtime_error("Cannot perform memory allocation: invalid arguments");
-            }
-        }
-
-        // several problems with this:
-        // 1: the slot has to be chosen dynamically (TODO: CHECK KVM LIMITATION)
-        // 2: the memory at VM_Offset might overlap with an existing user memory region mapping
-        // 3: the memory might not overlap at VM_Offset but due to its size collide with an existing mapping near its end
-        struct kvm_userspace_memory_region region = {
-            .slot = 0,
-            .guest_phys_addr = VM_Offset,
-            .memory_size = Mem_Spec->Size,
-            .userspace_addr = (u_int64_t) Mem_Spec->Address,
-        };
-
-        __int32_t _ret = ioctl(Vm_Descriptor, KVM_SET_USER_MEMORY_REGION, &region);
-        if (_ret < 0) {
-            throw ; // TODO: MAKE EXC TYPE
-        }
+    void Cera_Vm::Insert_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset) {
+        Mem_Ctrl->Create_Mem(V_Slot, N_Pages, VOffset);
     }
 
     CCore_Id_t Cera_Vm::Insert_Cera_Core(void) {
-        int _newid = VCores_List.size();
+        for (u_int8_t i = 0; i < VCores_List_Len; i++) {
+            if (VCores_List[i] == nullptr) {
+                VCores_List[i] = new Cera_VCPU(Vm_Descriptor, i);
 
-        if (_newid > Kvm_VCPU_Id_Max) {
-            throw er;
+                return i;
+            }
         }
-
-        VCores_List.push_back(Cera_VCPU(Vm_Descriptor, _newid));
-
-        return _newid;
+        throw std::out_of_range("Cannot exceed KVM vCPU limit"); // really awkward to choose this exception type
     }
 
     void Cera_Vm::FLARE(CC_R_Flags_t Flags) {
-        for (auto &i : VCores_List) {
-            i.Run_Threaded();
+        for (u_int8_t i = 0; i < VCores_List_Len; i++) {
+            if (VCores_List[i] != nullptr) {
+                VCores_List[i]->Run_Threaded();
+            }
         }
+        return;
     }
 
     void Cera_Vm::Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags) {
-        try {
-            VCores_List.at(Id).Run_Here();
-        }
-        catch (std::out_of_range &e) {
-            throw std::invalid_argument("Cannot run: No VCPU with given Core Id");
+        if (VCores_List[Id] == nullptr || Id > Kvm_VCPU_Id_Max) {
+            throw std::out_of_range("Cannot run: No VCPU with given Core Id");
         }
 
+        VCores_List[Id]->Run_Here();
     }
 
-    void Cera_Vm::Remove_Mem(VMem_Id_t Id) {
-        /* NOTE / IMPLEMENT / FIXME: be aware of the fact that for Id
-            0 < Id < VMem_List.size()
-            could be true.
-        */
-        if (Id < VMem_List.size()) {
-            throw er; // TODO: THROW RANGE ERROR OR MAKE SUITABLE EXC TYPE
-        }
-
-        try {
-            VMem_List.erase(Id);
-        }
-        catch (std::out_of_range &e) {
-            throw std::invalid_argument("No such VMem module");
-        }
+    void Cera_Vm::Remove_Mem(Mem_Slot_t V_Slot) {
+        // you could use the Flag in the VMem type to dynamically determine whether
+        // to use Delete_Mem or Detach_Mem
+        Mem_Ctrl->Delete_Mem(V_Slot);
     }
 
-    void Cera_Vm::Manip_Mem(VMem_Id_t Id, HMem_Area_Specifier Host_Mem_Source) {
-        HMem_Area_Specifier *HMem;
 
-        try {
-            HMem = &(VMem_List.at(Id).Host_Memory);
-        }
-        catch (std::out_of_range &e) {
-            throw std::invalid_argument("No virtual memory module with given Id");
-        }
-        
-        if (Host_Mem_Source.Address == nullptr) {
-            throw std::invalid_argument("Host_Mem_Source holds invalid address (null pointer)");
+    void Cera_Vm::Remove_Cera_Core(CCore_Id_t Id) {
+        if (VCores_List[Id] == nullptr || Id > Kvm_VCPU_Id_Max) {
+            throw std::out_of_range("No VCPU with given Core Id");
         }
 
-        if (HMem->Size < Host_Mem_Source.Size) {
-            throw std::invalid_argument("Memory mismatch: Length is larger than target memory module");
-        }
+        delete VCores_List[Id];
+        VCores_List[Id] = nullptr;
+    }
 
-        memcpy(HMem->Address, Host_Mem_Source.Address, Host_Mem_Source.Size);
+    void Cera_Vm::Set_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem_Source, off_t Offset) {
+        Mem_Ctrl->Copy_To_Mem(V_Slot, Host_Mem_Source.Address, Host_Mem_Source.Size, Offset);
     }
 }

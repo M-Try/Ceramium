@@ -25,7 +25,7 @@ namespace Ceramium {
         for (size_t i = 0; i < VMem_List.size(); i++) {
             ci = &VMem_List.at(i);
             if (ci->Flags & 0x01) {
-                munmap(ci->Host_Memory.Address, ci->Host_Memory.Size);
+                Delete_VMem(ci->Host_Memory);
             }
         }
     }
@@ -64,7 +64,7 @@ namespace Ceramium {
 
     void Cera_MemCtl::Insert_HMem(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset) {
         if (Is_Slot_Taken(V_Slot)) {
-            throw er; // TODO MAKE EXC TYPE
+            throw slot_taken_error();
         }
 
         _Add_Mem_To_List(V_Slot, Host_Memory, VOffset, 0x00);
@@ -82,9 +82,13 @@ namespace Ceramium {
     void Cera_MemCtl::Copy_To_Mem(Mem_Slot_t V_Slot, void *H_Address, size_t Length, off_t Offset) {
         for (auto &i : VMem_List) {
             if (i.VSlot == V_Slot) {
-                memcpy((void *) (i.Host_Memory.Address + Offset), H_Address, __min(Length, i.Host_Memory.Size - Offset));
+                size_t cpysize = Length > i.Host_Memory.Size - Offset ? i.Host_Memory.Size - Offset : Length;
+                memcpy((void *) ((u_int8_t *) i.Host_Memory.Address + Offset), H_Address, cpysize);
+                return;
             }
         }
+
+        throw std::out_of_range("No memory module in given slot");
     }
 
     bool Cera_MemCtl::Is_Slot_Taken(Mem_Slot_t V_Slot) {
@@ -102,9 +106,12 @@ namespace Ceramium {
     }
 
     void Cera_MemCtl::_Add_Mem_To_List(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset, Mem_Flags_t Flags) {
+        // a problem with this:
+        // the memory overlap with an existing user memory region mapping
+
         struct kvm_userspace_memory_region region = {
             .slot = V_Slot,
-            .guest_phys_addr = VOffset,
+            .guest_phys_addr = (u_int64_t) VOffset,
             .memory_size = Host_Memory->Size,
             .userspace_addr = (u_int64_t) Host_Memory->Address
         };

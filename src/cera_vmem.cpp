@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include <sys/mman.h>
 
 #include <stdexcept>
@@ -13,7 +15,18 @@ namespace Ceramium {
         HMem_Area_Specifier new_map;
         new_map.Address = mmap(NULL, N_Pages * 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         if (new_map.Address == MAP_FAILED) {
-            throw er; // TODO MAKE EXC TYPE
+            if (errno == ENOMEM) {
+                // ENOMEM can be fired by the process's RLIMIT_DATA limit, described in getrlimit(2).
+                // exceeding that limit causes the error. TODO: try to increase the limit (configurable behaviour?)
+                // instead of throwing an error
+                throw std::runtime_error("Cannot allocate memory: out of memory");
+            }
+            else if (errno == EAGAIN) {
+                throw std::runtime_error("Cannot allocate memory: too much memory has been locked");
+            }
+            else {
+                throw std::runtime_error("Failed to allocate memory");
+            }
         }
         new_map.Size = N_Pages * 0x1000;
 
@@ -21,9 +34,10 @@ namespace Ceramium {
     }
 
     void Delete_VMem(HMem_Area_Specifier VMem_Map) {
-        int status = munmap(VMem_Map.Address, VMem_Map.Size);
-        if (status == -1) {
-            errno;
+        if (munmap(VMem_Map.Address, VMem_Map.Size == -1)) {
+            // likely caused an invalid argument
+            // errno contains further information
+            throw std::invalid_argument("Specified memory area is not valid");
         }
     }
 }

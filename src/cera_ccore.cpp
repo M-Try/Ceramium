@@ -44,7 +44,7 @@ namespace Ceramium {
         struct kvm_run *runhandle_ = (kvm_run *) mmap(NULL, Kvm_VCPU_Runmap_Size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpufh, 0);
 
         if (runhandle_ == MAP_FAILED) {
-            throw er; // TODO MAKE EXC TYPE
+            throw std::runtime_error("Unable to acquire runhandle for vCPU"); // TODO: do better error handling
         }
 
         Run_Handle = runhandle_;
