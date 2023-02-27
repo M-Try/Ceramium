@@ -22,9 +22,8 @@ namespace Ceramium {
         ~Cera_Vm();
 
         void Insert_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset);
-        // void Insert_Mem(Cera_Mem_Initialiser *Initialiser);
+        void Add_Host_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem, off_t VOffset);
         CCore_Id_t Insert_Cera_Core(void);
-        // CCore_Id_t Insert_Cera_Core(CC_Initialiser *Initialiser);
 
         // bool Config_Cera_Core(CCC_t Config_Code, CCore_Id_t Id, int64_t Arg);
         void Set_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem_Source, off_t Offset);

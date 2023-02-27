@@ -49,6 +49,10 @@ namespace Ceramium {
         Mem_Ctrl->Create_Mem(V_Slot, N_Pages, VOffset);
     }
 
+    void Cera_Vm::Add_Host_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem, off_t VOffset) {
+        Mem_Ctrl->Insert_HMem(V_Slot, Host_Mem, VOffset);
+    }
+
     CCore_Id_t Cera_Vm::Insert_Cera_Core(void) {
         for (u_int8_t i = 0; i < VCores_List_Len; i++) {
             if (VCores_List[i] == nullptr) {
