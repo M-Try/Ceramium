@@ -6,7 +6,7 @@ LIB_DYNAMIC := libceramium.so.1
 
 compile_objs:
 	@echo "Compiling object files..."
-	@$(CXX) -c -fPIC ./src/*.cpp
+	@$(CXX) -c -fPIC ./src/*.cpp ./src/exceptions/*.cpp
 	@mv *.o $(BIN_DIR)/objs
 	@echo "Compiled successfully"
 
