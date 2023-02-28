@@ -27,7 +27,7 @@ namespace Ceramium {
 
         // bool Config_Cera_Core(CCC_t Config_Code, CCore_Id_t Id, int64_t Arg);
         void Set_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem_Source, off_t Offset);
-
+        void Reset_Core(CCore_Id_t Id);
         void FLARE(CC_R_Flags_t Flags); // full load and run environment
         void Run_Single_Core(CCore_Id_t Id, CC_R_Flags_t Flags);
 

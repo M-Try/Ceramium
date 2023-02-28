@@ -64,6 +64,18 @@ namespace Ceramium {
         throw std::out_of_range("Cannot exceed KVM vCPU limit"); // really awkward to choose this exception type
     }
 
+    void Cera_Vm::Set_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem_Source, off_t Offset) {
+        Mem_Ctrl->Copy_To_Mem(V_Slot, Host_Mem_Source.Address, Host_Mem_Source.Size, Offset);
+    }
+
+    void Cera_Vm::Reset_Core(CCore_Id_t Id) {
+        if (Id > Kvm_VCPU_Id_Max || VCores_List[Id] == nullptr) {
+            throw std::out_of_range("No VCPU with given Core Id");
+        }
+
+        reset_vcpu(*VCores_List[Id]);
+    }
+
     void Cera_Vm::FLARE(CC_R_Flags_t Flags) {
         for (u_int8_t i = 0; i < VCores_List_Len; i++) {
             if (VCores_List[i] != nullptr) {
@@ -89,7 +101,7 @@ namespace Ceramium {
 
 
     void Cera_Vm::Remove_Cera_Core(CCore_Id_t Id) {
-        if (VCores_List[Id] == nullptr || Id > Kvm_VCPU_Id_Max) {
+        if (Id > Kvm_VCPU_Id_Max || VCores_List[Id] == nullptr) {
             throw std::out_of_range("No VCPU with given Core Id");
         }
 
@@ -97,7 +109,5 @@ namespace Ceramium {
         VCores_List[Id] = nullptr;
     }
 
-    void Cera_Vm::Set_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem_Source, off_t Offset) {
-        Mem_Ctrl->Copy_To_Mem(V_Slot, Host_Mem_Source.Address, Host_Mem_Source.Size, Offset);
-    }
+
 }

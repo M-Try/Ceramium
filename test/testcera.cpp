@@ -36,8 +36,6 @@ int main(int argc, const char **argv) {
 }
 
 /*
-reset_vcpu(vcpu);
-
 while (1) {
     clock_t _begin_time = clock();
 

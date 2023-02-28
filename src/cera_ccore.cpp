@@ -1,11 +1,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h> // close()
-#include <sys/mman.h>
-#include <sys/ioctl.h>
 
 #include <thread>
 #include <stdexcept>
+
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <linux/kvm.h>
 
 #include "./common.hpp"
 #include "./cera_init.hpp"
@@ -53,10 +55,21 @@ namespace Ceramium {
     void Cera_VCPU::Run_Here(void) {
         run_vcpu(this->FHandle);
 
-        if (Run_Handle->exit_reason == KVM_EXIT_FAIL_ENTRY || Run_Handle->exit_reason == KVM_EXIT_INTERNAL_ERROR) {
-            throw cera_vcpu_entry_error(); // TODO MAKE EXC TYPE
+        switch (Run_Handle->exit_reason) {
+            case KVM_EXIT_FAIL_ENTRY:
+            case KVM_EXIT_INTERNAL_ERROR:
+                throw cera_vcpu_entry_error();
+            case KVM_EXIT_HLT:
+                return;
+            case KVM_EXIT_IO:
+                
+                // todo: implement
+            default:
+                //uncaught
+                return;
         }
     }
+
 
     void Cera_VCPU::Run_Threaded(void) {
         std::thread T_Core_Run = std::thread(&Ceramium::Cera_VCPU::Run_Here, this);
