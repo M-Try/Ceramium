@@ -74,6 +74,12 @@ namespace Ceramium {
     void Cera_VCPU::Run_Threaded(void) {
         std::thread T_Core_Run = std::thread(&Ceramium::Cera_VCPU::Run_Here, this);
     }
+    void Cera_VCPU::Register_IO_Handler(unsigned short IO_Port, Cera_Io_Handler_t Handler) {
+        Io_Handlers[IO_Port] = Handler;
+    }
+    void Cera_VCPU::Unregister_IO_Handler(unsigned short IO_Port) {
+        Io_Handlers.erase(IO_Port);
+    }
 
     CCore_Id_t Cera_VCPU::Get_Core_Id(void) {
         return Id;
