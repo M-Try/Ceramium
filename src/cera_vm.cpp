@@ -68,6 +68,14 @@ namespace Ceramium {
         Mem_Ctrl->Copy_To_Mem(V_Slot, Host_Mem_Source.Address, Host_Mem_Source.Size, Offset);
     }
 
+    void Cera_Vm::Register_IO_Handler(CCore_Id_t Id, unsigned short Port, Cera_Io_Handler_t Handler) {
+        VCores_List[Id]->Register_IO_Handler(Port, Handler); // TODO: error handling
+    }
+
+    void Cera_Vm::Unregister_IO_Handler(CCore_Id_t Id, unsigned short Port) {
+        VCores_List[Id]->Unregister_IO_Handler(Port);
+    }
+
     void Cera_Vm::Reset_Core(CCore_Id_t Id) {
         if (Id > Kvm_VCPU_Id_Max || VCores_List[Id] == nullptr) {
             throw std::out_of_range("No VCPU with given Core Id");
