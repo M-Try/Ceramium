@@ -57,16 +57,17 @@ namespace Ceramium {
             run_vcpu(this->FHandle);
 
             switch (Run_Handle->exit_reason) {
-                case KVM_EXIT_FAIL_ENTRY:
                 case KVM_EXIT_INTERNAL_ERROR:
+                case KVM_EXIT_FAIL_ENTRY:
                     throw cera_vcpu_entry_error();
                 case KVM_EXIT_HLT:
                     return;
                 case KVM_EXIT_IO:
                     if (Run_Handle->io.direction == KVM_EXIT_IO_OUT) {
-                        Io_Handlers[Run_Handle->io.port](Run_Handle+Run_Handle->io.data_offset, Run_Handle->io.size):
+                        Io_Handlers[Run_Handle->io.port]((((char *)Run_Handle) + Run_Handle->io.data_offset), Run_Handle->io.size);
                     }
                     // if direction is KVM_EXIT_IO_IN, it remains uncaught TODO: fix this
+                    break;
                 default:
                     //uncaught
                     return;
@@ -80,10 +81,15 @@ namespace Ceramium {
     }
     
     void Cera_VCPU::Register_IO_Handler(unsigned short IO_Port, Cera_Io_Handler_t Handler) {
-        Io_Handlers[IO_Port] = Handler;
+        Io_Handlers.insert_or_assign(IO_Port, Handler);
     }
+
     void Cera_VCPU::Unregister_IO_Handler(unsigned short IO_Port) {
         Io_Handlers.erase(IO_Port);
+    }
+
+    void Cera_VCPU::Reset_Core(void) {
+        reset_vcpu(this->FHandle);
     }
 
     CCore_Id_t Cera_VCPU::Get_Core_Id(void) {

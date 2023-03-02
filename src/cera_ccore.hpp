@@ -6,7 +6,7 @@
 #include "./cera_types.hpp"
 
 namespace Ceramium {
-    typedef void (Cera_Io_Handler_t)(void *, size_t);
+    typedef void (*Cera_Io_Handler_t)(void *, size_t);
 
     class Cera_VCPU {
     private:
@@ -25,6 +25,7 @@ namespace Ceramium {
         void Run_Threaded(void);
         void Register_IO_Handler(unsigned short IO_Port, Cera_Io_Handler_t Handler);
         void Unregister_IO_Handler(unsigned short IO_Port);
+        void Reset_Core(void);
         CCore_Id_t Get_Core_Id(void);
     };
 }
