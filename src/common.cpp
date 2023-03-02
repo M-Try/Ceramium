@@ -19,16 +19,16 @@ namespace Ceramium {
     void reset_vcpu(int _vcpu) {
         struct kvm_sregs sregs;
 
-        ioctl(_vcpu, KVM_GET_SREGS, &sregs); // fetch softregs
+        ioctl(_vcpu, KVM_GET_SREGS, &sregs); // fetch specregs
 
-        sregs.cs.base = 0;
-        sregs.cs.selector = 0;
+        sregs.cs.base = 0; // CRITICAL
+        sregs.cs.selector = 0; //CRITICAl
         
         ioctl(_vcpu, KVM_SET_SREGS, &sregs); // writeback
 
         struct kvm_regs regs = { // deliberate ad-hoc manipulation for runtime setup
-            .rip = 0x1000,
-            .rflags = 0x2,
+            .rip = 0x0,
+            .rflags = 0x2, // CRITICAL
         };
 
         ioctl(_vcpu, KVM_SET_REGS, &regs); // write regs
