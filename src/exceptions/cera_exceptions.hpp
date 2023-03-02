@@ -5,13 +5,16 @@
 using std::exception;
 
 class cerainit_error : public exception {
+public:
     const char *what() noexcept;
 };
 
 class ceravm_construct_error : public exception {
+public:
     const char *what() noexcept;
 };
 
 class cera_vcpu_entry_error : public exception {
+public:
     const char *what() noexcept;
 };
