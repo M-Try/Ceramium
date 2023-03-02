@@ -107,7 +107,7 @@ namespace Ceramium {
 
     void Cera_MemCtl::_Add_Mem_To_List(Mem_Slot_t V_Slot, HMem_Area_Specifier *Host_Memory, off_t VOffset, Mem_Flags_t Flags) {
         // a problem with this:
-        // the memory overlap with an existing user memory region mapping
+        // the memory might overlap with an existing user memory region mapping
 
         struct kvm_userspace_memory_region region = {
             .slot = V_Slot,
@@ -116,7 +116,10 @@ namespace Ceramium {
             .userspace_addr = (u_int64_t) Host_Memory->Address
         };
 
-        ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region);
+        int _status = ioctl(VM_FHandle, KVM_SET_USER_MEMORY_REGION, &region);
+        if (_status == -1) {
+            throw std::runtime_error("Cannot add memory to VM: underlying error");
+        }
 
         VMem_List.push_back((VMem) {
             .Host_Memory = *Host_Memory,
