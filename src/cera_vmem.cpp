@@ -34,7 +34,7 @@ namespace Ceramium {
     }
 
     void Delete_VMem(HMem_Area_Specifier VMem_Map) {
-        if (munmap(VMem_Map.Address, VMem_Map.Size == -1)) {
+        if (munmap(VMem_Map.Address, VMem_Map.Size) == -1) {
             // likely caused an invalid argument
             // errno contains further information
             throw std::invalid_argument("Specified memory area is not valid");
