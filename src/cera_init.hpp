@@ -3,9 +3,9 @@
 #include <sys/types.h>
 
 namespace Ceramium {
-    static int Global_Kvm_Handle;
-    static int Kvm_VCPU_Id_Max;
-    static size_t Kvm_VCPU_Runmap_Size;
+    inline int Global_Kvm_Handle;
+    inline int Kvm_VCPU_Id_Max;
+    inline size_t Kvm_VCPU_Runmap_Size;
 
     void Init(void);
     void Init(char *Kvm_Path);
