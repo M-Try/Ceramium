@@ -34,7 +34,7 @@ namespace Ceramium {
 
         // check if we can use a memory-mapped area as vm memory
         int c_check_kvm_ummap = ioctl(kvmfh, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
-        if (c_check_kvm_ummap == -1) {
+        if (c_check_kvm_ummap == -1 || !c_check_kvm_ummap) {
             throw cerainit_error();
         }
 
