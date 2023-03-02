@@ -17,13 +17,14 @@
 #include <stdexcept>
 
 // local includes
+#include "./common.hpp"
 #include "./cera_vm.hpp"
 #include "./cera_init.hpp"
 #include "./exceptions/cera_exceptions.hpp"
 
 
 namespace Ceramium {
-    Cera_Vm::Cera_Vm(unsigned int VCPU_Count) {
+    Cera_Vm::Cera_Vm() {
         this->Vm_Descriptor = ioctl(Global_Kvm_Handle, KVM_CREATE_VM, 0);
         if (this->Vm_Descriptor == -1) {
             throw ceravm_construct_error();
@@ -50,7 +51,7 @@ namespace Ceramium {
     }
 
     void Cera_Vm::Add_Host_Mem(Mem_Slot_t V_Slot, HMem_Area_Specifier Host_Mem, off_t VOffset) {
-        Mem_Ctrl->Insert_HMem(V_Slot, Host_Mem, VOffset);
+        Mem_Ctrl->Insert_HMem(V_Slot, &Host_Mem, VOffset);
     }
 
     CCore_Id_t Cera_Vm::Insert_Cera_Core(void) {
@@ -81,7 +82,7 @@ namespace Ceramium {
             throw std::out_of_range("No VCPU with given Core Id");
         }
 
-        reset_vcpu(*VCores_List[Id]);
+        VCores_List[Id]->Reset_Core();
     }
 
     void Cera_Vm::FLARE(CC_R_Flags_t Flags) {
@@ -116,6 +117,4 @@ namespace Ceramium {
         delete VCores_List[Id];
         VCores_List[Id] = nullptr;
     }
-
-
 }

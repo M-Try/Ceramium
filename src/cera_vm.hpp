@@ -12,13 +12,13 @@
 namespace Ceramium {
     class Cera_Vm {
     private:
-        int Vm_Descriptor = -1;
-        Cera_VCPU **VCores_List = nullptr;
+        int Vm_Descriptor;
+        Cera_VCPU **VCores_List;
         size_t VCores_List_Len;
         Cera_MemCtl *Mem_Ctrl;
 
     public:
-        Cera_Vm(unsigned int VCPU_Count);
+        Cera_Vm();
         ~Cera_Vm();
 
         void Insert_Mem(Mem_Slot_t V_Slot, size_t N_Pages, off_t VOffset);
